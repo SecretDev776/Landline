@@ -17,11 +17,28 @@ function generateBookingRef(): string {
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate DATABASE_URL at runtime
+    if (!process.env.DATABASE_URL) {
+      console.error('ERROR: DATABASE_URL environment variable is not set');
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Database configuration error',
+          details: 'DATABASE_URL environment variable is required. Please set it in Vercel environment variables.'
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log('Booking API called');
+    
     const body = await request.json();
+    console.log('Request body received:', JSON.stringify(body));
     
     // Validate request
     const validation = bookingSchema.safeParse(body);
     if (!validation.success) {
+      console.error('Validation failed:', validation.error.errors);
       return NextResponse.json(
         { success: false, error: 'Invalid request', details: validation.error.errors },
         { status: 400 }
@@ -29,6 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { tripInstanceId, passengers, contactEmail, contactPhone } = validation.data;
+    console.log('Booking params:', { tripInstanceId, passengersCount: passengers.length });
 
     // Use a transaction with retry logic for concurrency handling
     let retries = 3;
@@ -150,11 +168,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('Booking error:', error);
-    
     const errorMessage = error.message || 'Internal server error';
+    const errorStack = error.stack || '';
+    console.error('Error details:', { message: errorMessage, stack: errorStack });
     
     return NextResponse.json(
-      { success: false, error: errorMessage },
+      { 
+        success: false, 
+        error: errorMessage,
+        type: error.constructor?.name || typeof error
+      },
       { status: 500 }
     );
   }

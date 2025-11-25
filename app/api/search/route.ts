@@ -9,11 +9,28 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate DATABASE_URL at runtime
+    if (!process.env.DATABASE_URL) {
+      console.error('ERROR: DATABASE_URL environment variable is not set');
+      return NextResponse.json(
+        { 
+          error: 'Database configuration error',
+          details: 'DATABASE_URL environment variable is required. Please set it in Vercel environment variables.'
+        },
+        { status: 500 }
+      );
+    }
+
+    // Log incoming request for debugging in production
+    console.log('Search API called');
+    
     const body = await request.json();
+    console.log('Request body received:', JSON.stringify(body));
     
     // Validate request
     const validation = searchSchema.safeParse(body);
     if (!validation.success) {
+      console.error('Validation failed:', validation.error.errors);
       return NextResponse.json(
         { error: 'Invalid request', details: validation.error.errors },
         { status: 400 }
@@ -21,11 +38,22 @@ export async function POST(request: NextRequest) {
     }
 
     const { origin, destination, date } = validation.data;
+    console.log('Search params:', { origin, destination, date });
 
     // Parse and validate date
     const searchDate = new Date(date);
     const dayStart = startOfDay(searchDate);
     const dayEnd = endOfDay(searchDate);
+    console.log('Date range:', { dayStart, dayEnd });
+
+    // Test database connection
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      console.log('Database connection successful');
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError);
+      throw new Error(`Database connection error: ${dbError instanceof Error ? dbError.message : 'Unknown'}`);
+    }
 
     // Find routes matching origin and destination
     // Using type assertion to work around Prisma 4.x type limitation with mode: 'insensitive'
@@ -40,6 +68,7 @@ export async function POST(request: NextRequest) {
       } as Prisma.StringFilter,
     };
 
+    console.log('Querying routes...');
     const routes = await prisma.route.findMany({
       where: whereClause,
       include: {
@@ -61,6 +90,7 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+    console.log(`Found ${routes.length} routes`);
 
     // Transform results
     const results: TripResult[] = [];
@@ -86,7 +116,8 @@ export async function POST(request: NextRequest) {
 
     // Sort by departure time
     results.sort((a, b) => a.departureTime.localeCompare(b.departureTime));
-
+    
+    console.log(`Returning ${results.length} trip results`);
     return NextResponse.json({ results });
   } catch (error) {
     console.error('Search error:', error);
@@ -96,7 +127,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        details: errorMessage,
+        type: error instanceof Error ? error.constructor.name : typeof error
       },
       { status: 500 }
     );
