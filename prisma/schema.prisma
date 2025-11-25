@@ -1,12 +1,16 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Production Prisma schema file for PostgreSQL
+// To use this for production:
+// 1. Replace schema.prisma with this file
+// 2. Update DATABASE_URL to PostgreSQL connection string
+// 3. Run: npx prisma migrate dev
+// 4. Run: npm run seed
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -95,3 +99,4 @@ model Passenger {
 
   @@index([bookingId])
 }
+

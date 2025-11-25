@@ -3,12 +3,22 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Clear existing data
-  await prisma.passenger.deleteMany();
-  await prisma.booking.deleteMany();
-  await prisma.tripInstance.deleteMany();
-  await prisma.trip.deleteMany();
-  await prisma.route.deleteMany();
+  // Clear existing data using raw SQL with CASCADE for PostgreSQL
+  console.log('Clearing existing data...');
+  
+  try {
+    await prisma.$executeRaw`TRUNCATE TABLE "Passenger", "Booking", "TripInstance", "Trip", "Route" RESTART IDENTITY CASCADE`;
+    console.log('Existing data cleared with TRUNCATE CASCADE.');
+  } catch (error) {
+    // If TRUNCATE fails (e.g., tables don't exist), use deleteMany
+    console.log('TRUNCATE failed, using deleteMany instead...');
+    await prisma.passenger.deleteMany();
+    await prisma.booking.deleteMany();
+    await prisma.tripInstance.deleteMany();
+    await prisma.trip.deleteMany();
+    await prisma.route.deleteMany();
+    console.log('Existing data cleared with deleteMany.');
+  }
 
   console.log('Creating routes...');
   

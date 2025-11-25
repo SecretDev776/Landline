@@ -28,9 +28,11 @@ export async function POST(request: NextRequest) {
       where: {
         origin: {
           contains: origin,
+          mode: 'insensitive',
         },
         destination: {
           contains: destination,
+          mode: 'insensitive',
         },
       },
       include: {
