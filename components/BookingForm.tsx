@@ -46,7 +46,6 @@ export function BookingForm({ trip, onComplete }: BookingFormProps) {
     setIsSubmitting(true);
 
     try {
-      // Validate all passengers have required fields
       for (let i = 0; i < passengers.length; i++) {
         if (!passengers[i].firstName || !passengers[i].lastName) {
           setError(`Please enter first and last name for passenger ${i + 1}`);
@@ -86,7 +85,6 @@ export function BookingForm({ trip, onComplete }: BookingFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Trip Summary */}
       <div className="bg-blue-50 rounded-lg p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">
           Complete Your Booking
@@ -116,7 +114,6 @@ export function BookingForm({ trip, onComplete }: BookingFormProps) {
         </div>
       )}
 
-      {/* Number of Passengers */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Number of Passengers
@@ -135,7 +132,6 @@ export function BookingForm({ trip, onComplete }: BookingFormProps) {
         </select>
       </div>
 
-      {/* Passenger Details */}
       <div className="space-y-6">
         {passengers.map((passenger, index) => (
           <div key={index} className="border border-gray-200 rounded-lg p-6">
@@ -198,7 +194,6 @@ export function BookingForm({ trip, onComplete }: BookingFormProps) {
         ))}
       </div>
 
-      {/* Contact Information */}
       <div className="border border-gray-200 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Contact Information
@@ -238,7 +233,6 @@ export function BookingForm({ trip, onComplete }: BookingFormProps) {
         </p>
       </div>
 
-      {/* Submit Button */}
       <button
         type="submit"
         disabled={isSubmitting}

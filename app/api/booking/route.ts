@@ -5,7 +5,7 @@ import { bookingSchema, BookingResult } from '@/lib/types';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Generate a unique booking reference
+
 function generateBookingRef(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let ref = '';
@@ -17,7 +17,7 @@ function generateBookingRef(): string {
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate DATABASE_URL at runtime
+
     if (!process.env.DATABASE_URL) {
       console.error('ERROR: DATABASE_URL environment variable is not set');
       return NextResponse.json(
@@ -35,7 +35,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Request body received:', JSON.stringify(body));
     
-    // Validate request
     const validation = bookingSchema.safeParse(body);
     if (!validation.success) {
       console.error('Validation failed:', validation.error.errors);
@@ -48,15 +47,12 @@ export async function POST(request: NextRequest) {
     const { tripInstanceId, passengers, contactEmail, contactPhone } = validation.data;
     console.log('Booking params:', { tripInstanceId, passengersCount: passengers.length });
 
-    // Use a transaction with retry logic for concurrency handling
     let retries = 3;
     let booking = null;
 
     while (retries > 0 && !booking) {
       try {
-        // Perform the booking in a transaction with optimistic locking
         booking = await prisma.$transaction(async (tx) => {
-          // Lock the trip instance and check availability
           const tripInstance = await tx.tripInstance.findUnique({
             where: { id: tripInstanceId },
             include: {
@@ -80,7 +76,6 @@ export async function POST(request: NextRequest) {
             throw new Error(`Only ${tripInstance.availableSeats} seats available`);
           }
 
-          // Update available seats with optimistic locking
           const updated = await tx.tripInstance.updateMany({
             where: {
               id: tripInstanceId,
@@ -92,12 +87,10 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          // If no rows were updated, it means another transaction modified it
           if (updated.count === 0) {
             throw new Error('CONCURRENT_MODIFICATION');
           }
 
-          // Generate unique booking reference
           let bookingRef = generateBookingRef();
           let attempts = 0;
           while (attempts < 10) {
@@ -109,10 +102,8 @@ export async function POST(request: NextRequest) {
             attempts++;
           }
 
-          // Calculate total price
           const totalPrice = tripInstance.trip.basePrice * passengers.length;
 
-          // Create booking
           const newBooking = await tx.booking.create({
             data: {
               tripInstanceId,
@@ -138,13 +129,10 @@ export async function POST(request: NextRequest) {
           return newBooking;
         });
 
-        // If we get here, booking succeeded
         break;
       } catch (error: any) {
         if (error.message === 'CONCURRENT_MODIFICATION' && retries > 1) {
-          // Retry on concurrent modification
           retries--;
-          // Small delay before retry
           await new Promise((resolve) => setTimeout(resolve, 100));
           continue;
         }

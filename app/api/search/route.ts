@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate DATABASE_URL at runtime
+
     if (!process.env.DATABASE_URL) {
       console.error('ERROR: DATABASE_URL environment variable is not set');
       return NextResponse.json(
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log incoming request for debugging in production
+
     console.log('Search API called');
     
     const body = await request.json();
@@ -40,13 +40,11 @@ export async function POST(request: NextRequest) {
     const { origin, destination, date } = validation.data;
     console.log('Search params:', { origin, destination, date });
 
-    // Parse and validate date
     const searchDate = new Date(date);
     const dayStart = startOfDay(searchDate);
     const dayEnd = endOfDay(searchDate);
     console.log('Date range:', { dayStart, dayEnd });
 
-    // Test database connection
     try {
       await prisma.$queryRaw`SELECT 1`;
       console.log('Database connection successful');
@@ -55,8 +53,7 @@ export async function POST(request: NextRequest) {
       throw new Error(`Database connection error: ${dbError instanceof Error ? dbError.message : 'Unknown'}`);
     }
 
-    // Find routes matching origin and destination
-    // Using type assertion to work around Prisma 4.x type limitation with mode: 'insensitive'
+
     const whereClause: Prisma.RouteWhereInput = {
       origin: {
         contains: origin,
@@ -92,7 +89,6 @@ export async function POST(request: NextRequest) {
     });
     console.log(`Found ${routes.length} routes`);
 
-    // Transform results
     const results: TripResult[] = [];
 
     for (const route of routes) {
@@ -114,7 +110,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Sort by departure time
     results.sort((a, b) => a.departureTime.localeCompare(b.departureTime));
     
     console.log(`Returning ${results.length} trip results`);

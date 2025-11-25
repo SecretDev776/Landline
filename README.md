@@ -4,7 +4,7 @@ A fast, reliable, and high-conversion booking widget for shuttle services. Built
 
 ##  Live Demo
 
-[Live URL will be added after deployment]
+https://landline-a8jgfxf0z-secretdev776-9261s-projects.vercel.app/
 
 ##  Features
 
@@ -46,7 +46,7 @@ For a comprehensive overview of the architecture, database design, API structure
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone <https://github.com/SecretDev776/Landline>
 cd landline
 
 # Install dependencies

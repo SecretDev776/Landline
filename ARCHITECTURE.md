@@ -464,7 +464,7 @@ app/
 
 ### Environment Variables
 ```
-DATABASE_URL=<database_connection_string>
+DATABASE_URL="postgresql://neondb_owner:npg_jO4uh6SaGBpZ@ep-ancient-band-af4xjgks-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 NODE_ENV=production
 ```
 
