@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { searchSchema, TripResult } from '@/lib/types';
 import { format, startOfDay, endOfDay } from 'date-fns';
+import { Prisma } from '@prisma/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,17 +28,20 @@ export async function POST(request: NextRequest) {
     const dayEnd = endOfDay(searchDate);
 
     // Find routes matching origin and destination
+    // Using type assertion to work around Prisma 4.x type limitation with mode: 'insensitive'
+    const whereClause: Prisma.RouteWhereInput = {
+      origin: {
+        contains: origin,
+        mode: 'insensitive',
+      } as Prisma.StringFilter,
+      destination: {
+        contains: destination,
+        mode: 'insensitive',
+      } as Prisma.StringFilter,
+    };
+
     const routes = await prisma.route.findMany({
-      where: {
-        origin: {
-          contains: origin,
-          mode: 'insensitive',
-        },
-        destination: {
-          contains: destination,
-          mode: 'insensitive',
-        },
-      },
+      where: whereClause,
       include: {
         trips: {
           include: {
