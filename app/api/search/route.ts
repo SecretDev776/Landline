@@ -1,0 +1,90 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { searchSchema, TripResult } from '@/lib/types';
+import { format, startOfDay, endOfDay } from 'date-fns';
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    
+    // Validate request
+    const validation = searchSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Invalid request', details: validation.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const { origin, destination, date } = validation.data;
+
+    // Parse and validate date
+    const searchDate = new Date(date);
+    const dayStart = startOfDay(searchDate);
+    const dayEnd = endOfDay(searchDate);
+
+    // Find routes matching origin and destination
+    const routes = await prisma.route.findMany({
+      where: {
+        origin: {
+          contains: origin,
+        },
+        destination: {
+          contains: destination,
+        },
+      },
+      include: {
+        trips: {
+          include: {
+            tripInstances: {
+              where: {
+                date: {
+                  gte: dayStart,
+                  lte: dayEnd,
+                },
+                status: 'active',
+                availableSeats: {
+                  gt: 0,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Transform results
+    const results: TripResult[] = [];
+
+    for (const route of routes) {
+      for (const trip of route.trips) {
+        for (const instance of trip.tripInstances) {
+          results.push({
+            id: trip.id,
+            tripInstanceId: instance.id,
+            origin: route.origin,
+            destination: route.destination,
+            date: format(instance.date, 'yyyy-MM-dd'),
+            departureTime: trip.departureTime,
+            arrivalTime: trip.arrivalTime,
+            price: trip.basePrice,
+            availableSeats: instance.availableSeats,
+            distance: route.distance,
+          });
+        }
+      }
+    }
+
+    // Sort by departure time
+    results.sort((a, b) => a.departureTime.localeCompare(b.departureTime));
+
+    return NextResponse.json({ results });
+  } catch (error) {
+    console.error('Search error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+

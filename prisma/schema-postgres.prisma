@@ -1,0 +1,102 @@
+// Production Prisma schema file for PostgreSQL
+// To use this for production:
+// 1. Replace schema.prisma with this file
+// 2. Update DATABASE_URL to PostgreSQL connection string
+// 3. Run: npx prisma migrate dev
+// 4. Run: npm run seed
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Physical route between two cities
+model Route {
+  id          String   @id @default(cuid())
+  origin      String
+  destination String
+  distance    Int      // in miles
+  trips       Trip[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([origin, destination])
+  @@index([origin])
+  @@index([destination])
+}
+
+// Scheduled trip on a route (e.g., "SF to LA, Mondays at 8:00 AM")
+model Trip {
+  id            String         @id @default(cuid())
+  routeId       String
+  route         Route          @relation(fields: [routeId], references: [id])
+  departureTime String         // Time in HH:mm format (e.g., "08:00")
+  arrivalTime   String         // Time in HH:mm format (e.g., "16:00")
+  daysOfWeek    String         // Comma-separated days: "0,1,2,3,4" (0=Sunday)
+  basePrice     Float          // Base price in dollars
+  capacity      Int            @default(55) // Total seats available
+  tripInstances TripInstance[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([routeId])
+}
+
+// Specific instance of a trip on a particular date with seat inventory
+model TripInstance {
+  id              String    @id @default(cuid())
+  tripId          String
+  trip            Trip      @relation(fields: [tripId], references: [id])
+  date            DateTime  // Date of this specific trip instance
+  availableSeats  Int       // Current available seats
+  version         Int       @default(0) // For optimistic locking
+  status          String    @default("active") // active, cancelled, completed
+  bookings        Booking[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([tripId, date])
+  @@index([tripId])
+  @@index([date])
+  @@index([status])
+}
+
+// Customer booking
+model Booking {
+  id             String       @id @default(cuid())
+  tripInstanceId String
+  tripInstance   TripInstance @relation(fields: [tripInstanceId], references: [id])
+  bookingRef     String       @unique // Unique booking reference
+  status         String       @default("confirmed") // confirmed, cancelled, modified
+  totalPrice     Float
+  passengers     Passenger[]
+  contactEmail   String
+  contactPhone   String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  cancelledAt    DateTime?
+
+  @@index([tripInstanceId])
+  @@index([bookingRef])
+  @@index([status])
+  @@index([contactEmail])
+}
+
+// Passenger details
+model Passenger {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
+}
+
